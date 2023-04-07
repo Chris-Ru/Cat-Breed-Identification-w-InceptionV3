@@ -1,25 +1,27 @@
 import numpy as np # linear algebra
+from scipy import ndimage, misc
+import matplotlib.pyplot as plt
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
 import os
 from pathlib import Path
 import cv2
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split 
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from sklearn.metrics import confusion_matrix, classification_report
-from keras.optimizers import Adam, SGD, RMSprop
-import tensorflow as tf
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import roc_auc_score
-import matplotlib.pyplot as plt
-import cv2 as cv
-import numpy as np
-from scipy import ndimage, misc
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, f1_score, roc_auc_score
 import skimage
 from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.models import Sequential
 from keras.layers.pooling import GlobalAveragePooling2D
+from sklearn.utils import shuffle
+
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.layers import Dense, Dropout
+from keras.optimizers import Adam, SGD, RMSprop
+import tensorflow as tf
+
+import matplotlib.pyplot as plt
+
 
 
 
@@ -56,7 +58,6 @@ df = pd.DataFrame( list( zip (Filepaths, labels) ), columns = ['Filepath', 'Labe
 
 df
 
-from sklearn.utils import shuffle
 df = (df.sample(frac = 1).reset_index()).drop(columns = 'index')
 df
 
@@ -140,8 +141,6 @@ print('Test accuracy is : ',test_accuracy, '%' )
 confusion_matrix(test.Labels , predictions)
 
 
-
-from sklearn.metrics import accuracy_score, f1_score
 print('F1 score is',f1_score(test.Labels, predictions, average = 'weighted'))
 
 
