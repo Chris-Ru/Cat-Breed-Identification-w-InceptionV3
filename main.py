@@ -145,7 +145,7 @@ from sklearn.metrics import accuracy_score, f1_score
 print('F1 score is',f1_score(test.Labels, predictions, average = 'weighted'))
 
 
-predicted_probab =model.predict_proba(x_test)
+predicted_probab = model.predict_proba(x_test)
 predicted_probab
 
 
