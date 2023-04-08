@@ -1,152 +1,310 @@
-import numpy as np # linear algebra
-from scipy import ndimage, misc
-import matplotlib.pyplot as plt
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
-
+# Import Data
 import os
-from pathlib import Path
-import cv2
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, f1_score, roc_auc_score
-import skimage
-from keras.applications.inception_v3 import InceptionV3, preprocess_input
-from keras.models import Sequential
-from keras.layers.pooling import GlobalAveragePooling2D
-from sklearn.utils import shuffle
-
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.layers import Dense, Dropout
-from keras.optimizers import Adam, SGD, RMSprop
+import numpy as np
+from PIL import Image
+from imageio import imread
 import tensorflow as tf
-
+tf.compat.v1.disable_eager_execution()
+import tf_slim as slim
+from tf_slim.nets import inception
+import tf_slim as slim
+import cv2
 import matplotlib.pyplot as plt
 
 
+# Data Loading
+ckpt_path = "kaggle\input\inception_v3.ckpt"
+images_path = "/kaggle/input/animals/*"
+img_width = 299
+img_height = 299
+batch_size = 16
+batch_shape = [batch_size, img_height, img_width, 3]
+num_classes = 1001
+predict_output = []
+class_names_path = "kaggle\input\imagenet_class_names.txt"
+with open(class_names_path) as f:
+    class_names = f.readlines()
+
+# tf.disable_v2_behavior()
+# Create Inception v3 model
+X = tf.placeholder(tf.float32, shape=batch_shape)
+
+with slim.arg_scope(inception.inception_v3_arg_scope()):
+    logits, end_points = inception.inception_v3(
+        X, num_classes=num_classes, is_training=False
+    )
+
+predictions = end_points["Predictions"]
+saver = tf.train.Saver(slim.get_model_variables())
 
 
-filelist  = []
-
-for dirname, _, filenames in os.walk('/kaggle/input'):
-    for filename in filenames:
-        filelist.append (os.path.join(dirname, filename))
-
-len(filelist)
-
-
-filelist
-
-
-labels_needed = ['Bombay', 'Calico', 'Burmese', 'Himalayan', 'Munchkin', 'Ragdoll', 'Siberian', 'British Shorthair', 'Russian Blue', 'Dilute Calico']
-
-Filepaths   = []
-labels = []
-
-for image_file in filelist:
-    label = image_file.split(os.path.sep)[-2]
-    if label in labels_needed:
-
-        Filepaths.append(image_file)
-        labels.append(label)
-
-set(labels)
-
-len(Filepaths), len(labels)
+def load_images(input_dir):
+    global batch_shape
+    images = np.zeros(batch_shape)
+    filenames = []
+    idx = 0
+    batch_size = batch_shape[0]
+    files = tf.gfile.Glob(input_dir)[:20]
+    files.sort()
+    for filepath in files:
+        with tf.gfile.Open(filepath, "rb") as f:
+            imgRaw = np.array(Image.fromarray(imread(f, as_gray=False, pilmode="RGB")).resize((299, 299))).astype(np.float) / 255.0
+        # Images for inception classifier are normalized to be in [-1, 1] interval.
+        images[idx, :, :, :] = imgRaw * 2.0 - 1.0
+        filenames.append(os.path.basename(filepath))
+        idx += 1
+        if idx == batch_size:
+            yield filenames, images
+            filenames = []
+            images = np.zeros(batch_shape)
+            idx = 0
+    if idx > 0:
+        yield filenames, images
 
 
-df = pd.DataFrame( list( zip (Filepaths, labels) ), columns = ['Filepath', 'Labels'] )
 
-df
+# Load Pre-Trained Model
+session_creator = tf.train.ChiefSessionCreator(
+        scaffold=tf.train.Scaffold(saver=saver),
+        checkpoint_filename_with_path=ckpt_path,
+        master='')
 
-df = (df.sample(frac = 1).reset_index()).drop(columns = 'index')
-df
+
+# Classify Images using Model
+with tf.train.MonitoredSession(session_creator=session_creator) as sess:
+    for filenames, images in load_images(images_path):
+        labels = sess.run(predictions, feed_dict={X: images})
+        for filename, label, image in zip(filenames, labels, images):
+            predict_output.append([filename, label, image])
 
 
-f,a = plt.subplots(nrows=4, ncols=3,figsize=(13, 7),
-                        subplot_kw={'xticks': [], 'yticks': []})
 
-for i, ax in enumerate(a.flat):
-    ax.imshow(plt.imread(df.Filepath[i]))
-    ax.set_title(df.Labels[i])
+# Display Predicted Output
+for x in predict_output:
+    out_list = list(x[1])
+    topPredict = sorted(range(len(out_list)), key=lambda i: out_list[i], reverse=True)[:5]
+    plt.imshow((((x[2]+1)/2)*255).astype(int))
+    plt.show()
+    print("Filename:",x[0])
+    print("Displaying the top 5 Predictions for above image:")
+    for p in topPredict:
+        print(class_names[p-1].strip())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# import numpy as np # linear algebra
+# import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+# import os
+# from pathlib import Path
+# import cv2
+# import matplotlib.pyplot as plt
+# from sklearn.model_selection import train_test_split 
+# from sklearn.metrics import confusion_matrix, classification_report
+# from keras.optimizers import Adam, SGD, RMSprop
+# import tensorflow as tf
+# from sklearn.metrics import confusion_matrix
+# from sklearn.metrics import roc_auc_score
+# import matplotlib.pyplot as plt
+# import cv2 as cv
+# import numpy as np
+# from scipy import ndimage, misc
+# import skimage
+# from keras.applications.inception_v3 import InceptionV3, preprocess_input
+# from keras.models import Sequential
+# from keras.layers.pooling import GlobalAveragePooling2D
+# from tensorflow.keras.preprocessing.image import ImageDataGenerator
+# from tensorflow.keras.layers import Dense, Dropout
+
+
+# filelist  = []
+
+# for dirname, _, filenames in os.walk('kaggle\data\cats.csv'):
+#     for filename in filenames:
+#         filelist.append (os.path.join(dirname, filename))
+
+# len(filelist)
+
+# filelist
+
+# labels_needed = ['Abyssinian','Balinese','Tonkinese']
+
+# Filepaths   = []
+# labels = []
+
+# for image_file in filelist:
+#     label = image_file.split(os.path.sep)[-2]
+#     if label in labels_needed:
+
+#         Filepaths.append(image_file)
+#         labels.append(label)
+
+
+# set(labels)
+
+# len(Filepaths), len(labels)
+
+# df = pd.DataFrame( list( zip (Filepaths, labels) ), columns = ['Filepath', 'Labels'] )
+# df
+
+# from sklearn.utils import shuffle
+# df = (df.sample(frac = 1).reset_index()).drop(columns = 'index')
+# df
+
+# f,a = plt.subplots(nrows=4, ncols=3,figsize=(13, 7),
+#                         subplot_kw={'xticks': [], 'yticks': []})
+
+# for i, ax in enumerate(a.flat):
+#     ax.imshow(plt.imread(df.Filepath[i]))
+#     ax.set_title(df.Labels[i])
     
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
+
+# ax=pd.value_counts(df['Labels'],ascending=True).plot(kind='barh',
+#                                                        fontsize="40",
+#                                                        title="Distribution Of classes",
+#                                                        figsize=(15,8))
+# ax.set(xlabel="Images per class", ylabel="Classes")
+# ax.xaxis.label.set_size(40)
+# ax.yaxis.label.set_size(40)
+# ax.title.set_size(60)
+# plt.show()
+
+# df.Labels.value_counts()
 
 
-ax=pd.value_counts(df['Labels'],ascending=True).plot(kind='barh', fontsize="40", title="Distribution Of classes", figsize=(15,8))
-ax.set(xlabel="Images per class", ylabel="Classes")
-ax.xaxis.label.set_size(40)
-ax.yaxis.label.set_size(40)
-ax.title.set_size(60)
-plt.show()
+# train_ratio = .75
+# validation_ratio = 0.10
+# test_ratio = 0.25
+
+# train, test = train_test_split(df, test_size = test_ratio )
+# val, test = train_test_split(test, test_size=test_ratio/(test_ratio + validation_ratio))
 
 
-df.Labels.value_counts()
+# img_datagen = ImageDataGenerator(rescale=1./255, 
+#                                    rotation_range=30, 
+#                                    width_shift_range=0.2,
+#                                    height_shift_range=0.2, 
+#                                    horizontal_flip = 'true')
+   
+
+# x_train =  img_datagen.flow_from_dataframe(dataframe = train,  x_col='Filepath', y_col='Labels',  target_size=(299, 299), shuffle=False, batch_size=30, seed = 12)
+# x_val = img_datagen.flow_from_dataframe(dataframe = val,  x_col='Filepath', y_col='Labels',  target_size=(299, 299), shuffle=False, batch_size=30, seed = 12)
+# x_test = img_datagen.flow_from_dataframe(dataframe = test,  x_col='Filepath', y_col='Labels',  target_size=(299, 299), shuffle=False, batch_size=30, seed = 12)
 
 
-train_ratio = .75
-validation_ratio = 0.10
-test_ratio = 0.25
-
-train, test = train_test_split(df, test_size = test_ratio )
-val, test = train_test_split(test, test_size=test_ratio/(test_ratio + validation_ratio))
+# x_train
 
 
-img_datagen = ImageDataGenerator(rescale=1./255, rotation_range=30, width_shift_range=0.2,height_shift_range=0.2, horizontal_flip = 'true')
+# i_model = InceptionV3(weights= 'imagenet', include_top=False, input_shape=(299, 299, 3))
 
 
-
-x_train =  img_datagen.flow_from_dataframe(dataframe = train,  x_col='Filepath', y_col='Labels',  target_size=(299, 299), shuffle=False, batch_size=10, seed=10)
-x_val = img_datagen.flow_from_dataframe(dataframe = val,  x_col='Filepath', y_col='Labels',  target_size=(299, 299), shuffle=False, batch_size=10, seed=10)
-x_test = img_datagen.flow_from_dataframe(dataframe = test,  x_col='Filepath', y_col='Labels',  target_size=(299, 299), shuffle=False, batch_size=10, seed=10)
-
-
-x_train
-
-
-i_model = InceptionV3(weights= 'imagenet', include_top=False, input_shape=(299, 299, 3))
-
-for layer in i_model.layers:
-    layer.trainable = False
+# for layer in i_model.layers:
+#     layer.trainable = False
     
-i_model.summary() 
+# i_model.summary()
 
 
-predictions = model.predict(x_test)
-predictions = np.argmax(predictions, axis=1)
-predictions
+# model = Sequential()
+# model.add(i_model)
+# model.add(GlobalAveragePooling2D())
+
+# model.add(Dense(32))
+# model.add(Dropout(0.20))
+# model.add(Dense(3, activation = 'softmax'))
+# model.summary()
 
 
-labels = x_train.class_indices
-labels
+# model.compile(optimizer = SGD(),
+#              loss="categorical_crossentropy",
+#              metrics=["accuracy"])
 
 
-
-test["Labels"].replace({"Bombay": 0,'British Shorthair': 1,
-                        'Burmese': 2,
-                        'Calico': 3,
-                        'Dilute Calico': 4,
-                        'Himalayan': 5,
-                        'Munchkin': 6,
-                        'Ragdoll': 7,
-                        'Russian Blue': 8,
-                        'Siberian': 9}, inplace = True)
+# len(x_train)
 
 
-test_accuracy = model.evaluate(x_test)[1] * 100
-print('Test accuracy is : ',test_accuracy, '%' )
+# len(x_test)
 
 
-
-confusion_matrix(test.Labels , predictions)
-
-
-print('F1 score is',f1_score(test.Labels, predictions, average = 'weighted'))
+# len(x_val)
 
 
-predicted_probab = model.predict_proba(x_test)
-predicted_probab
+# history = model.fit(x_train, validation_data = x_val,
+#                     steps_per_epoch = len(x_train),
+#                     validation_steps = len(x_val), 
+#                     epochs = 40, 
+#                     verbose = 2,callbacks=[PlotLossesKeras()])
 
 
+# predictions = model.predict(x_test)
+# predictions = np.argmax(predictions, axis=1)
+# predictions
 
-print("ROC- AUC score is", roc_auc_score( test.Labels, predicted_probab, multi_class='ovr'))
+
+# labels = x_train.class_indices
+# labels
+
+
+# test["Labels"].replace({"Abyssinian": 0,'Balinese': 1,
+#  'Tonkinese': 2 }, inplace = True)
+
+
+# test_accuracy = model.evaluate(x_test)[1] * 100
+# print('Test accuracy is : ',test_accuracy, '%' )
+
+
+# cf = confusion_matrix(test.Labels , predictions)
+# cf
+
+
+# import seaborn as sns
+
+# ax = sns.heatmap(cf, annot=True, cmap='Blues')
+
+# ax.set_title('Seaborn Confusion Matrix with labels\n\n');
+# ax.set_xlabel('\nPredicted Values')
+# ax.set_ylabel('Actual Values ');
+
+# ## Ticket labels - List must be in alphabetical order
+# ax.xaxis.set_ticklabels(['Abyssinian','Balinese','Tonkinese'])
+# ax.yaxis.set_ticklabels(['Abyssinian','Balinese','Tonkinese'])
+
+
+# ## Display the visualization of the Confusion Matrix.
+# plt.show()
+
+
+# from sklearn.metrics import accuracy_score, f1_score
+# print('F1 score is',f1_score(test.Labels, predictions, average = 'weighted'))
+
+
+# predicted_probab =model.predict_proba(x_test)
+# predicted_probab
+
+
+# print("ROC- AUC score is", roc_auc_score( test.Labels, predicted_probab, multi_class='ovr'))
+
+
+# from sklearn.metrics import classification_report
+ 
+# print(classification_report(test.Labels, predictions))

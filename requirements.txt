@@ -1,9 +1,13 @@
+#use pip install -r requirements.txt for installation of requirements
 numpy
 scipy
 pandas
-cv2
-matplotlib.pyplot
-sklearn
-tensorflow
+matplotlib
+tensorflow = 2.10
+tf-slim
 keras
-skimage
+opencv-python
+scikit-image
+scikit-learn
+livelossplot
+seaborn
