@@ -3,11 +3,8 @@ numpy
 scipy
 pandas
 matplotlib
-tensorflow = 2.10
-tf-slim
+tensorflow
 keras
 opencv-python
 scikit-image
 scikit-learn
-livelossplot
-seaborn
