@@ -1,4 +1,4 @@
-#use pip install -r requirements.txt for installation of requirements
+#use "pip install -r requirements.txt" for installation of requirements
 numpy
 scipy
 pandas
@@ -9,3 +9,5 @@ opencv-python
 scikit-image
 scikit-learn
 seaborn
+livelossplot
+IPython

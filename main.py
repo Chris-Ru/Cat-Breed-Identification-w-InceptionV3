@@ -1,3 +1,4 @@
+# 1. Reading Modules
 import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import os
@@ -20,10 +21,14 @@ from keras.layers.pooling import GlobalAveragePooling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.layers import Dense, Dropout
 
+from IPython.display import SVG, Image
+#from livelossplot import PlotLossesTensorFlowKeras
+from livelossplot import PlotLossesKeras
+from livelossplot.keras import PlotLossesCallback
 
 filelist  = []
 
-for dirname, _, filenames in os.walk('kaggle\data\cats.csv'):
+for dirname, _, filenames in os.walk('kaggle\data'):
     for filename in filenames:
         filelist.append (os.path.join(dirname, filename))
 
@@ -31,7 +36,7 @@ len(filelist)
 
 filelist
 
-labels_needed = ['Abyssinian','Balinese','Tonkinese']
+labels_needed = ['Bombay', 'Calico', 'Burmese', 'Himalayan', 'Munchkin', 'Ragdoll', 'Siberian', 'British Shorthair', 'Russian Blue', 'Dilute Calico']
 
 Filepaths   = []
 labels = []
@@ -48,6 +53,8 @@ set(labels)
 
 len(Filepaths), len(labels)
 
+# Creating a dataframe with file paths and the labels for them
+
 df = pd.DataFrame( list( zip (Filepaths, labels) ), columns = ['Filepath', 'Labels'] )
 df
 
@@ -58,9 +65,11 @@ df
 f,a = plt.subplots(nrows=4, ncols=3,figsize=(13, 7),
                         subplot_kw={'xticks': [], 'yticks': []})
 
-fig, axes = plt.subplots(ncols=2,nrows=3, sharex=True, sharey=True)
+# Displaying first 12 pictures
 
-for i, ax in enumerate(axes.flat):
+f, a = plt.subplots(ncols=2,nrows=3, sharex=True, sharey=True)
+
+for i, ax in enumerate(a.flat):
     ax.scatter([i//2+1, i],[i,i//3])
         
 plt.tight_layout()
@@ -76,8 +85,11 @@ ax.yaxis.label.set_size(40)
 ax.title.set_size(60)
 plt.show()
 
+# Checking for class imbalance
+
 df.Labels.value_counts()
 
+# Splitting the data And Creating data generator
 
 train_ratio = .75
 validation_ratio = 0.10
@@ -88,10 +100,10 @@ val, test = train_test_split(test, test_size=test_ratio/(test_ratio + validation
 
 
 img_datagen = ImageDataGenerator(rescale=1./255, 
-                                   rotation_range=30, 
-                                   width_shift_range=0.2,
-                                   height_shift_range=0.2, 
-                                   horizontal_flip = 'true')
+                                rotation_range=30, 
+                                width_shift_range=0.2,
+                                height_shift_range=0.2, 
+                                horizontal_flip = 'true')
    
 
 x_train =  img_datagen.flow_from_dataframe(dataframe = train,  x_col='Filepath', y_col='Labels',  target_size=(299, 299), shuffle=False, batch_size=30, seed = 12)
@@ -101,6 +113,7 @@ x_test = img_datagen.flow_from_dataframe(dataframe = test,  x_col='Filepath', y_
 
 x_train
 
+# Modelling
 
 i_model = InceptionV3(weights= 'imagenet', include_top=False, input_shape=(299, 299, 3))
 
@@ -135,12 +148,15 @@ len(x_test)
 len(x_val)
 
 
-history = model.fit(x_train, validation_data = x_val,
+history = model.fit(x_train, 
+                    validation_data = x_val,
                     steps_per_epoch = len(x_train),
                     validation_steps = len(x_val), 
                     epochs = 40, 
                     verbose = 2,callbacks=[PlotLossesKeras()])
 
+
+# Predicting on test data
 
 predictions = model.predict(x_test)
 predictions = np.argmax(predictions, axis=1)
@@ -154,43 +170,30 @@ labels
 test["Labels"].replace({"Abyssinian": 0,'Balinese': 1,
  'Tonkinese': 2 }, inplace = True)
 
+#Evaluating the test data
+
+# Test Accuracy
+
 
 test_accuracy = model.evaluate(x_test)[1] * 100
 print('Test accuracy is : ',test_accuracy, '%' )
 
+# Confusion Matrix
 
 cf = confusion_matrix(test.Labels , predictions)
 cf
 
-
-import seaborn as sns
-
-ax = sns.heatmap(cf, annot=True, cmap='Blues')
-
-ax.set_title('Seaborn Confusion Matrix with labels\n\n');
-ax.set_xlabel('\nPredicted Values')
-ax.set_ylabel('Actual Values ');
-
-## Ticket labels - List must be in alphabetical order
-ax.xaxis.set_ticklabels(['Abyssinian','Balinese','Tonkinese'])
-ax.yaxis.set_ticklabels(['Abyssinian','Balinese','Tonkinese'])
-
-
-## Display the visualization of the Confusion Matrix.
-plt.show()
-
+# F1 Score
 
 from sklearn.metrics import accuracy_score, f1_score
 print('F1 score is',f1_score(test.Labels, predictions, average = 'weighted'))
-
 
 predicted_probab =model.predict_proba(x_test)
 predicted_probab
 
 
+# ROC - AUC Score
+predicted_probab =model.predict_proba(x_test)
+predicted_probab
+
 print("ROC- AUC score is", roc_auc_score( test.Labels, predicted_probab, multi_class='ovr'))
-
-
-from sklearn.metrics import classification_report
- 
-print(classification_report(test.Labels, predictions))
