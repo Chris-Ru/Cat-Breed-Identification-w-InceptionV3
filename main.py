@@ -127,10 +127,9 @@ i_model.summary()
 model = Sequential()
 model.add(i_model)
 model.add(GlobalAveragePooling2D())
-
-model.add(Dense(32))
-model.add(Dropout(0.20))
-model.add(Dense(3, activation = 'softmax'))
+model.add(Dense(128))
+model.add(Dropout(0.2))
+model.add(Dense(10, activation = 'softmax'))
 model.summary()
 
 
@@ -139,21 +138,8 @@ model.compile(optimizer = SGD(),
              metrics=["accuracy"])
 
 
-len(x_train)
-
-
-len(x_test)
-
-
-len(x_val)
-
-
-history = model.fit(x_train, 
-                    validation_data = x_val,
-                    steps_per_epoch = len(x_train),
-                    validation_steps = len(x_val), 
-                    epochs = 40, 
-                    verbose = 2,callbacks=[PlotLossesKeras()])
+history = model.fit(x_train, validation_data = x_val,steps_per_epoch = 175,validation_steps = 44,
+                epochs = 15, verbose = 2)
 
 
 # Predicting on test data
@@ -173,7 +159,6 @@ test["Labels"].replace({"Abyssinian": 0,'Balinese': 1,
 #Evaluating the test data
 
 # Test Accuracy
-
 
 test_accuracy = model.evaluate(x_test)[1] * 100
 print('Test accuracy is : ',test_accuracy, '%' )
