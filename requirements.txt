@@ -11,3 +11,6 @@ scikit-learn
 seaborn
 livelossplot
 IPython
+ffmpeg 
+libsm6 
+libxext6
