@@ -12,4 +12,3 @@ seaborn
 livelossplot
 IPython
 ffmpeg 
-libxext6
